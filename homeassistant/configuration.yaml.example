@@ -1,0 +1,7 @@
+# Minimal example showing how to load the package directory.
+# Merge this with your existing /config/configuration.yaml; do not replace an existing file blindly.
+
+default_config:
+
+homeassistant:
+  packages: !include_dir_named packages

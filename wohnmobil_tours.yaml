@@ -1,0 +1,97 @@
+# Copy this file to /config/packages/wohnmobil_tours.yaml.
+# The command paths intentionally reference Home Assistant's active /config runtime.
+
+wohnmobil_tour_names: {}
+
+command_line:
+  - sensor:
+      name: Wohnmobil Gesamtroute
+      unique_id: wohnmobil_gesamtroute
+      command: 'python3 /config/scripts/wohnmobil_route.py --config /config/wohnmobil_tours.private.json'
+      command_timeout: 300
+      scan_interval: 3600
+      value_template: '{{ value_json.state }}'
+      json_attributes:
+        - position_count
+        - tour_count
+        - home_radius_km
+        - return_confirm_hours
+        - home_stay_radius_km
+        - home_stay_count
+        - map_matching_enabled
+        - map_matching_provider
+        - min_lat
+        - max_lat
+        - min_lon
+        - max_lon
+        - center_lat
+        - center_lon
+        - tours
+        - tour_01_geojson
+        - tour_02_geojson
+        - tour_03_geojson
+        - tour_04_geojson
+        - tour_05_geojson
+        - tour_06_geojson
+        - tour_07_geojson
+        - tour_08_geojson
+        - tour_09_geojson
+        - tour_10_geojson
+        - tour_11_geojson
+        - tour_12_geojson
+        - tour_13_geojson
+        - tour_14_geojson
+        - tour_15_geojson
+        - tour_16_geojson
+        - tour_17_geojson
+        - tour_18_geojson
+        - tour_19_geojson
+        - tour_20_geojson
+        - tour_21_geojson
+        - tour_22_geojson
+        - tour_23_geojson
+        - tour_24_geojson
+        - tour_25_geojson
+        - tour_26_geojson
+        - tour_27_geojson
+        - tour_28_geojson
+        - tour_29_geojson
+        - tour_30_geojson
+        - tour_31_geojson
+        - tour_32_geojson
+        - tour_33_geojson
+        - tour_34_geojson
+        - tour_35_geojson
+        - tour_36_geojson
+        - tour_37_geojson
+        - tour_38_geojson
+        - tour_39_geojson
+        - tour_40_geojson
+        - tour_41_geojson
+        - tour_42_geojson
+        - tour_43_geojson
+        - tour_44_geojson
+        - tour_45_geojson
+        - tour_46_geojson
+        - tour_47_geojson
+        - tour_48_geojson
+        - tour_49_geojson
+        - tour_50_geojson
+
+shell_command:
+  wohnmobil_paj_sync: 'python3 /config/scripts/paj_sync_to_traccar.py --config /config/wohnmobil_tours.private.json'
+
+# Optional: enable this only if PAJ synchronization is configured and wanted.
+# automation:
+#   - id: wohnmobil_paj_sync_and_route_update
+#     alias: Wohnmobil - PAJ und Tourdaten aktualisieren
+#     mode: single
+#     triggers:
+#       - trigger: time_pattern
+#         minutes: '/5'
+#     actions:
+#       - action: shell_command.wohnmobil_paj_sync
+#       - delay: '00:00:02'
+#       - action: homeassistant.update_entity
+#         target:
+#           entity_id: sensor.wohnmobil_gesamtroute

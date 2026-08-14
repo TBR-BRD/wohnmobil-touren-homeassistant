@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python
+        run: python -m compileall -q scripts tests homeassistant/custom_components
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Check JavaScript syntax
+        run: node --check www/wohnmobil-tours-card.js
+      - name: Check public repository for obvious secrets
+        run: python scripts/check_public_repo.py .
