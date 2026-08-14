@@ -1,9 +1,0 @@
-type: custom:wohnmobil-tours-card
-entity: sensor.wohnmobil_gesamtroute
-names_entity: sensor.wohnmobil_tour_names
-title: Wohnmobil-Touren
-height: 720
-sidebar_width: 320
-show_rename: true
-# Optional, if a Home Assistant device_tracker entity should be shown:
-# tracker_entity: device_tracker.DEIN_WOHNMOBIL

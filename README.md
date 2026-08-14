@@ -27,9 +27,7 @@ Die Lösung trennt Reisen anhand bestätigter Aufenthalte im Heimatbereich, beh�
 - persistente, zentral in Home Assistant gespeicherte Tournamen
 - keine Python-Fremdpakete für die Skripte erforderlich
 
-![Touren Ansicht](docs/womo-ha-1.jpg)
 
-Touren Ansicht im Home Assistant
 
 <br>
 <a href="https://www.buymeacoffee.com/thoralf.brandt" target="_blank">

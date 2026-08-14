@@ -1,0 +1,35 @@
+# Private installation data
+wohnmobil_tours.private.json
+**/wohnmobil_tours.private.json
+*.private.json
+*.secrets.json
+secrets.yaml
+
+# Runtime state / GPS-derived data
+paj_sync_state.json
+wohnmobil_tour_stats.json
+paj_traccar_failures.json
+*.geojson
+*.gpx
+*.kml
+*.fit
+
+# Home Assistant runtime/private data
+.storage/
+backups/
+*.db
+*.db-shm
+*.db-wal
+home-assistant.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
