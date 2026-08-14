@@ -27,6 +27,12 @@ Die Lösung trennt Reisen anhand bestätigter Aufenthalte im Heimatbereich, beh�
 - persistente, zentral in Home Assistant gespeicherte Tournamen
 - keine Python-Fremdpakete für die Skripte erforderlich
 
+<br>
+<a href="https://www.buymeacoffee.com/thoralf.brandt" target="_blank">
+  <img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174">
+</a>
+<br>
+
 ## Architektur
 
 ```mermaid
