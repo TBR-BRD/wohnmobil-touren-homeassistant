@@ -81,6 +81,65 @@ class TourLogicTest(unittest.TestCase):
     def test_haversine_zero(self):
         self.assertAlmostEqual(0.0, route.haversine_km(1.0, 2.0, 1.0, 2.0))
 
+    def test_explain_diagnostics_report_rejected_stays(self):
+        points = [
+            point(0, 0.0, 0.0),
+            point(1, 0.0, 0.0),
+            # only a 1 h stay here -> rejected, needs 3 h
+            point(2, 0.30, 0.0),
+            point(4, 0.31, 0.0),
+            point(6, 0.0, 0.0),
+            point(7, 0.0, 0.0),
+            point(8, 0.0, 0.0),
+            point(9, 0.0, 0.0),
+        ]
+        diagnostics: dict = {}
+        tours, stays = route.split_tours(
+            points,
+            home_lat=0.0,
+            home_lon=0.0,
+            home_radius_km=20.0,
+            return_confirm_hours=3.0,
+            home_stay_radius_km=1.0,
+            diagnostics=diagnostics,
+        )
+
+        candidates = diagnostics["stay_candidates"]
+        self.assertTrue(candidates)
+        confirmed = [c for c in candidates if c["confirmed"]]
+        rejected = [c for c in candidates if not c["confirmed"]]
+        self.assertEqual(len(confirmed), len(stays))
+        self.assertTrue(any("need 3.00 h" in c["reason"] for c in rejected))
+        for entry in candidates:
+            self.assertIn(entry["window_ended_because"], {
+                "end_of_data", "left_home_radius", "moved_from_anchor",
+            })
+
+    def test_build_result_diagnostics_do_not_change_default_output(self):
+        points = [
+            point(0, 0.0, 0.0),
+            point(1, 0.0, 0.0),
+            point(2, 0.0, 0.0),
+            point(3, 0.0, 0.0),
+            point(4, 0.30, 0.0),
+            point(5, 0.0, 0.0),
+            point(6, 0.0, 0.0),
+            point(7, 0.0, 0.0),
+        ]
+        base_args = dict(
+            home_lat=0.0,
+            home_lon=0.0,
+            home_radius_km=20.0,
+            return_confirm_hours=3.0,
+            home_stay_radius_km=1.0,
+        )
+        tours_plain, _ = route.split_tours(points, **base_args)
+        tours_diag, _ = route.split_tours(points, diagnostics={}, **base_args)
+        self.assertEqual(
+            [len(t["points"]) for t in tours_plain],
+            [len(t["points"]) for t in tours_diag],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

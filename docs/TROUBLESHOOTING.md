@@ -59,6 +59,25 @@ Die Karte verwendet absichtlich eine eigene Leaflet-Instanz und initialisiert Ce
 
 Prüfen, ob `home_radius_km`, `return_confirm_hours` und `home_stay_radius_km` sinnvoll gesetzt sind. Die aktuelle Tourlogik schneidet nicht am Eintritt/Austritt des großen Heimat-Radius ab, sondern an bestätigten stationären Aufenthalten.
 
+## Es wird nur eine (aktive) Tour erkannt
+
+Mehrere abgeschlossene Touren entstehen nur zwischen **bestätigten Heimataufenthalten**. Ein Aufenthalt gilt erst als bestätigt, wenn das Fahrzeug mindestens `return_confirm_hours` lang innerhalb von `home_stay_radius_km` um denselben Punkt steht.
+
+Zur Ursachenanalyse das Skript mit `--explain` ausführen:
+
+```bash
+python3 /config/scripts/wohnmobil_route.py \
+  --config /config/wohnmobil_tours.private.json \
+  --disable-map-matching --explain > /tmp/route.json
+```
+
+Der Bericht erscheint auf `stderr` und zeigt pro Aufenthaltsfenster Dauer, Punktzahl, Spreizung um den Ankerpunkt und den Grund für eine Verwerfung:
+
+- **Kein bestätigter Aufenthalt** → alles wird eine aktive Tour. Sendet der Tracker beim Parken zu Hause überhaupt Positionen? Ist `return_confirm_hours` zu hoch?
+- **`moved_from_anchor` bei längeren Fenstern** → zu Hause wird an wechselnden Plätzen geparkt. `home_stay_radius_km` erhöhen (z. B. `2.0`–`3.0`).
+- **Große Datenlücken** → der Tracker war zwischendurch aus; ein einzelner Aufenthaltsblock überspannt dann evtl. mehrere reale Rückkehren.
+- **`from` zu spät** → im ausgewerteten Zeitraum liegt nur eine Reise.
+
 ## Map Matching zeigt Fehler
 
 Im Detailbereich der Tour wird der Fehler angezeigt. Häufige Ursachen:

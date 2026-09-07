@@ -163,6 +163,7 @@ def find_confirmed_home_stays(
     home_radius_km: float,
     return_confirm_hours: float,
     home_stay_radius_km: float,
+    diagnostics: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Find stationary stays inside the broad home radius.
 
@@ -182,18 +183,62 @@ def find_confirmed_home_stays(
         anchor = points[i]
         start_idx = i
         j = i
+        broke_on = "end_of_data"
 
         while j + 1 < n:
             nxt = points[j + 1]
             if not inside_home(nxt, home_lat, home_lon, home_radius_km):
+                broke_on = "left_home_radius"
                 break
             if not near_anchor(nxt, anchor, home_stay_radius_km):
+                broke_on = "moved_from_anchor"
                 break
             j += 1
 
         start_t = ptime(points[start_idx])
         end_t = ptime(points[j])
-        if start_t and end_t and (end_t - start_t).total_seconds() >= confirm_seconds:
+        duration_h = (
+            (end_t - start_t).total_seconds() / 3600.0
+            if start_t and end_t
+            else 0.0
+        )
+        confirmed = bool(
+            start_t and end_t and (end_t - start_t).total_seconds() >= confirm_seconds
+        )
+
+        if diagnostics is not None:
+            anchor_lat = float(anchor["latitude"])
+            anchor_lon = float(anchor["longitude"])
+            spread_km = max(
+                (
+                    haversine_km(
+                        anchor_lat,
+                        anchor_lon,
+                        float(p["latitude"]),
+                        float(p["longitude"]),
+                    )
+                    for p in points[start_idx : j + 1]
+                ),
+                default=0.0,
+            )
+            diagnostics.append(
+                {
+                    "start_time": start_t.isoformat() if start_t else None,
+                    "end_time": end_t.isoformat() if end_t else None,
+                    "duration_hours": round(duration_h, 2),
+                    "points": j - start_idx + 1,
+                    "anchor_spread_km": round(spread_km, 3),
+                    "window_ended_because": broke_on,
+                    "confirmed": confirmed,
+                    "reason": (
+                        "ok"
+                        if confirmed
+                        else f"stay only {duration_h:.2f} h, need {return_confirm_hours:.2f} h"
+                    ),
+                }
+            )
+
+        if confirmed:
             stays.append(
                 {
                     "start_idx": start_idx,
@@ -230,6 +275,7 @@ def split_tours(
     home_radius_km: float,
     return_confirm_hours: float,
     home_stay_radius_km: float,
+    diagnostics: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Build tours between confirmed home stays.
 
@@ -237,6 +283,11 @@ def split_tours(
     ends at the first point of the next one, so the first and last kilometres
     inside the broad home radius remain part of the tour.
     """
+    stay_candidates = (
+        diagnostics.setdefault("stay_candidates", [])
+        if diagnostics is not None
+        else None
+    )
     stays = find_confirmed_home_stays(
         points,
         home_lat,
@@ -244,6 +295,7 @@ def split_tours(
         home_radius_km,
         return_confirm_hours,
         home_stay_radius_km,
+        diagnostics=stay_candidates,
     )
     tours: list[dict[str, Any]] = []
 
@@ -623,7 +675,125 @@ def feature(
     return geojson, props
 
 
-def build_result(cfg: dict[str, Any], force_rematch: bool, disable_map_matching: bool) -> dict[str, Any]:
+def _fill_position_diagnostics(
+    diagnostics: dict[str, Any],
+    positions: list[dict[str, Any]],
+    home_lat: float,
+    home_lon: float,
+    home_radius_km: float,
+) -> None:
+    times = [t for t in (ptime(p) for p in positions) if t is not None]
+    inside = sum(
+        1 for p in positions if inside_home(p, home_lat, home_lon, home_radius_km)
+    )
+    gaps: list[dict[str, Any]] = []
+    for a, b in zip(times, times[1:]):
+        hours = (b - a).total_seconds() / 3600.0
+        if hours >= 1.0:
+            gaps.append({"from": a.isoformat(), "to": b.isoformat(), "hours": round(hours, 1)})
+    gaps.sort(key=lambda g: g["hours"], reverse=True)
+    diagnostics["positions"] = {
+        "total": len(positions),
+        "inside_home_radius": inside,
+        "outside_home_radius": len(positions) - inside,
+        "first_time": times[0].isoformat() if times else None,
+        "last_time": times[-1].isoformat() if times else None,
+        "largest_gaps_hours": gaps[:10],
+    }
+
+
+def _print_explain(diagnostics: dict[str, Any]) -> None:
+    out = sys.stderr
+    pos = diagnostics.get("positions", {})
+    settings = diagnostics.get("settings", {})
+    candidates = diagnostics.get("stay_candidates", [])
+    tours = diagnostics.get("tours", [])
+    confirmed = [c for c in candidates if c.get("confirmed")]
+    rejected = [c for c in candidates if not c.get("confirmed")]
+
+    print("=== Tour-Erkennung: Erklärung ===", file=out)
+    print(
+        f"Einstellungen: home_radius={settings.get('home_radius_km')} km, "
+        f"return_confirm={settings.get('return_confirm_hours')} h, "
+        f"home_stay_radius={settings.get('home_stay_radius_km')} km, "
+        f"from={settings.get('from')}",
+        file=out,
+    )
+    print(
+        f"Positionen: {pos.get('total')} gesamt, "
+        f"{pos.get('inside_home_radius')} im Heimatradius, "
+        f"{pos.get('outside_home_radius')} außerhalb "
+        f"({pos.get('first_time')} .. {pos.get('last_time')})",
+        file=out,
+    )
+    big_gaps = pos.get("largest_gaps_hours") or []
+    if big_gaps:
+        print("Größte Datenlücken (>=1 h):", file=out)
+        for g in big_gaps:
+            print(f"  {g['hours']:>6.1f} h   {g['from']} -> {g['to']}", file=out)
+
+    print(
+        f"\nHeimataufenthalte: {len(confirmed)} bestätigt, {len(rejected)} verworfen",
+        file=out,
+    )
+    for c in candidates:
+        mark = "OK " if c.get("confirmed") else "-- "
+        print(
+            f"  {mark}{c.get('start_time')} .. {c.get('end_time')}  "
+            f"{c.get('duration_hours'):>6.2f} h  {c.get('points')} Pkt  "
+            f"Spreizung {c.get('anchor_spread_km')} km  "
+            f"Ende: {c.get('window_ended_because')}  [{c.get('reason')}]",
+            file=out,
+        )
+
+    print(f"\nErgebnis: {len(tours)} Tour(en)", file=out)
+    for t in tours:
+        state = "aktiv" if t["active"] else "abgeschlossen"
+        print(
+            f"  Tour {t['number']}: {t['start']} .. {t['end']}  "
+            f"{t['gps_km']} km GPS  {t['points']} Pkt  ({state})",
+            file=out,
+        )
+
+    n_confirmed = len(confirmed)
+    print("\nHinweis:", file=out)
+    if n_confirmed == 0:
+        print(
+            "  Kein einziger Heimataufenthalt wurde bestätigt -> alles wird zu einer "
+            "aktiven Tour. Prüfe return_confirm_hours / home_stay_radius_km und ob der "
+            "Tracker beim Parken zu Hause überhaupt Positionen sendet.",
+            file=out,
+        )
+    elif n_confirmed == 1:
+        print(
+            "  Nur ein bestätigter Heimataufenthalt -> es kann nur eine (aktive) Tour "
+            "davor/danach geben. Für mehrere abgeschlossene Touren braucht es mindestens "
+            "zwei bestätigte Aufenthalte im Zeitraum.",
+            file=out,
+        )
+    if rejected:
+        near = [
+            c
+            for c in rejected
+            if isinstance(c.get("duration_hours"), (int, float))
+            and c["duration_hours"] >= 0.5
+            and c.get("window_ended_because") == "moved_from_anchor"
+        ]
+        if near:
+            print(
+                "  Mehrere Aufenthalte scheiterten an 'moved_from_anchor' -> das Fahrzeug "
+                "stand nicht eng genug an einem Punkt. home_stay_radius_km erhöhen "
+                "(z. B. 2-3 km) hilft, wenn zu Hause an wechselnden Plätzen geparkt wird.",
+                file=out,
+            )
+
+
+def build_result(
+    cfg: dict[str, Any],
+    force_rematch: bool,
+    disable_map_matching: bool,
+    diagnostics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     detection = cfg.get("tour_detection", {})
     mm = cfg.get("map_matching", {})
 
@@ -642,7 +812,32 @@ def build_result(cfg: dict[str, Any], force_rematch: bool, disable_map_matching:
         home_radius_km,
         return_confirm_hours,
         home_stay_radius_km,
+        diagnostics=diagnostics,
     )
+
+    if diagnostics is not None:
+        _fill_position_diagnostics(
+            diagnostics, positions, home_lat, home_lon, home_radius_km
+        )
+        diagnostics["settings"] = {
+            "home_radius_km": home_radius_km,
+            "return_confirm_hours": return_confirm_hours,
+            "home_stay_radius_km": home_stay_radius_km,
+            "from": str(detection.get("from", "")),
+            "max_tours": max_tours,
+        }
+        diagnostics["tours"] = [
+            {
+                "number": idx + 1,
+                "active": bool(t.get("active")),
+                "partial_start": bool(t.get("partial_start")),
+                "points": len(t["points"]),
+                "start": (ptime(t["points"][0]).isoformat() if ptime(t["points"][0]) else None),
+                "end": (ptime(t["points"][-1]).isoformat() if ptime(t["points"][-1]) else None),
+                "gps_km": round(route_km(t["points"]), 1),
+            }
+            for idx, t in enumerate(tours)
+        ]
 
     coords = [[float(p["longitude"]), float(p["latitude"])] for p in positions]
     if coords:
@@ -703,11 +898,21 @@ def main() -> int:
     parser.add_argument("--force-rematch", action="store_true", help="Re-run OSRM matching even for cached successful tours")
     parser.add_argument("--disable-map-matching", action="store_true", help="Skip OSRM map matching")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON for manual testing")
+    parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="Print a human-readable report of home-stay detection and tour boundaries to stderr",
+    )
     args = parser.parse_args()
 
     try:
         cfg = load_config(args.config)
-        result = build_result(cfg, args.force_rematch, args.disable_map_matching)
+        diagnostics: dict[str, Any] | None = {} if args.explain else None
+        result = build_result(
+            cfg, args.force_rematch, args.disable_map_matching, diagnostics
+        )
+        if diagnostics is not None:
+            _print_explain(diagnostics)
         print(json.dumps(result, ensure_ascii=False, indent=2 if args.pretty else None))
         return 0
     except Exception as exc:
