@@ -33,3 +33,6 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# Local working copies of the private "benita" deployment (not for publication)
+_live/

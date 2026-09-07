@@ -81,6 +81,20 @@ class TourLogicTest(unittest.TestCase):
     def test_haversine_zero(self):
         self.assertAlmostEqual(0.0, route.haversine_km(1.0, 2.0, 1.0, 2.0))
 
+    def test_resolve_from_absolute_passthrough(self):
+        self.assertEqual(
+            "2026-07-21T00:00:00Z", route.resolve_from("2026-07-21T00:00:00Z")
+        )
+
+    def test_resolve_from_relative_is_in_the_past(self):
+        for value in ("-200d", "200d", "4w", "6m"):
+            resolved = datetime.fromisoformat(route.resolve_from(value).replace("Z", "+00:00"))
+            self.assertLess(resolved, datetime.now(timezone.utc))
+        # 200 days ago is clearly earlier than 4 weeks ago
+        self.assertLess(
+            route.resolve_from("200d"), route.resolve_from("4w")
+        )
+
     def test_explain_diagnostics_report_rejected_stays(self):
         points = [
             point(0, 0.0, 0.0),

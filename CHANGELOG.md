@@ -3,6 +3,8 @@
 ## Unreleased
 
 - `wohnmobil_route.py --explain` ergänzt: erklärt auf stderr, welche Heimataufenthalte bestätigt bzw. verworfen wurden (mit Dauer, Ankerpunkt-Spreizung, Grund), zeigt Datenlücken und die resultierenden Tourgrenzen. Hilft bei „es wird nur eine Tour erkannt".
+- `tour_detection.from` akzeptiert jetzt auch ein rollierendes Fenster (`200d`, `26w`, `6m`) statt nur eines festen ISO-Datums, damit alte Reisen nicht unbemerkt aus der Auswertung fallen.
+- `paj_sync_to_traccar.py`: Zusatzfelder `steps`/`heartbeat`/`wzp` werden vor dem Senden an Traccar typgeprüft (PAJ liefert `wzp` als Boolean); nicht-numerische Werte werden verworfen statt als String weitergereicht.
 
 ## 1.0.0 - 2026-08-14
 

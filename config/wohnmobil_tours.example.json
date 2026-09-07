@@ -12,7 +12,7 @@
     "home_radius_km": 20.0,
     "return_confirm_hours": 3.0,
     "home_stay_radius_km": 1.0,
-    "from": "2026-01-01T00:00:00Z",
+    "from": "200d",
     "max_tours": 50
   },
   "map_matching": {

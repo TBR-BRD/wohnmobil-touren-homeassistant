@@ -13,12 +13,13 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -92,6 +93,24 @@ def require(cfg: dict[str, Any], section: str, key: str) -> Any:
     return value
 
 
+def resolve_from(value: Any) -> str:
+    """Accept either an absolute ISO-8601 timestamp or a relative window.
+
+    Relative values end in ``d`` (days), ``w`` (weeks) or ``m`` (30-day months),
+    optionally prefixed with ``-``, e.g. ``"-200d"`` means "200 days ago". A
+    rolling window keeps old journeys from silently dropping out of the analysis.
+    """
+    text = str(value).strip()
+    match = re.fullmatch(r"-?(\d+)\s*([dwm])", text, re.IGNORECASE)
+    if match:
+        amount = int(match.group(1))
+        unit = match.group(2).lower()
+        days = amount * {"d": 1, "w": 7, "m": 30}[unit]
+        start = datetime.now(timezone.utc) - timedelta(days=days)
+        return start.isoformat().replace("+00:00", "Z")
+    return text
+
+
 def fetch_positions(cfg: dict[str, Any]) -> list[dict[str, Any]]:
     traccar = cfg.get("traccar", {})
     detection = cfg.get("tour_detection", {})
@@ -100,7 +119,7 @@ def fetch_positions(cfg: dict[str, Any]) -> list[dict[str, Any]]:
     device_id = int(require(cfg, "traccar", "device_id"))
     username = str(require(cfg, "traccar", "username"))
     password = str(require(cfg, "traccar", "password"))
-    date_from = str(require(cfg, "tour_detection", "from"))
+    date_from = resolve_from(require(cfg, "tour_detection", "from"))
     date_to = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     params = urllib.parse.urlencode(

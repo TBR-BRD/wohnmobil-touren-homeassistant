@@ -21,7 +21,7 @@ Alle installationseigenen Werte liegen in `/config/wohnmobil_tours.private.json`
 | `home_radius_km` | `20.0` | großer Radius zur sicheren Trennung von Reisen |
 | `return_confirm_hours` | `3.0` | Mindestdauer eines bestätigten Heimataufenthalts |
 | `home_stay_radius_km` | `1.0` | maximale Bewegung um den Abstellpunkt während der Bestätigung |
-| `from` | – | Beginn des auszuwertenden Traccar-Zeitraums in ISO-8601 |
+| `from` | – | Beginn des auszuwertenden Traccar-Zeitraums. Entweder ein absoluter ISO-8601-Zeitpunkt (`2026-01-01T00:00:00Z`) oder ein rollierendes Fenster: `200d` / `-200d` (Tage), `26w` (Wochen), `6m` (30-Tage-Monate). Ein rollierendes Fenster verhindert, dass alte Reisen unbemerkt aus der Auswertung fallen. |
 | `max_tours` | `50` | maximale Zahl der an Home Assistant ausgegebenen Tour-Slots |
 
 ### Warum zwei Radien?

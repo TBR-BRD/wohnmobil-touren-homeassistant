@@ -112,8 +112,13 @@ def send_traccar(ingest, record):
         "pajId": str(record.get("id", "")),
     }
     for key in ("steps", "heartbeat", "wzp"):
-        if record.get(key) is not None:
-            params[key] = record[key]
+        value = record.get(key)
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            value = int(value)
+        if isinstance(value, (int, float, str)):
+            params[key] = value
 
     url = f"http://{host}:{port}/?{urlencode(params)}"
     request = Request(url, headers={"User-Agent": "wohnmobil-touren-homeassistant/1.0"}, method="GET")
