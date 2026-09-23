@@ -1,4 +1,4 @@
-const WOHNMOBIL_TOURS_VERSION = "1.0.0";
+const WOHNMOBIL_TOURS_VERSION = "1.1.0";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 
@@ -96,7 +96,12 @@ class WohnmobilToursCard extends HTMLElement {
       height: 720,
       sidebar_width: 320,
       show_rename: true,
-      map_tiles: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      // tile.openstreetmap.org blockt mittlerweile viele Browser-/App-Aufrufe
+      // ohne eigenen konformen User-Agent (osm.wiki/Blocked, HTTP 403). CARTOs
+      // kostenloser Basemap-Dienst erlaubt diese Art Einbettung ausdrücklich
+      // und zeigt dieselben OSM-Daten.
+      map_tiles: "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+      map_attribution: "© OpenStreetMap contributors © CARTO",
       line_weight: 4,
       line_opacity: 1,
       ...config
@@ -462,8 +467,8 @@ class WohnmobilToursCard extends HTMLElement {
     }
 
     L.tileLayer(this._config.map_tiles, {
-      maxZoom: 19,
-      attribution: "© OpenStreetMap contributors"
+      maxZoom: 20,
+      attribution: this._config.map_attribution || "© OpenStreetMap contributors"
     }).addTo(this._map);
 
     for (const item of shown) {
