@@ -1,4 +1,4 @@
-const WOHNMOBIL_TOURS_VERSION = "1.1.0";
+const WOHNMOBIL_TOURS_VERSION = "1.2.0";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 
@@ -98,10 +98,11 @@ class WohnmobilToursCard extends HTMLElement {
       show_rename: true,
       // tile.openstreetmap.org blockt mittlerweile viele Browser-/App-Aufrufe
       // ohne eigenen konformen User-Agent (osm.wiki/Blocked, HTTP 403). CARTOs
-      // kostenloser Basemap-Dienst erlaubt diese Art Einbettung ausdrücklich
-      // und zeigt dieselben OSM-Daten.
-      map_tiles: "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-      map_attribution: "© OpenStreetMap contributors © CARTO",
+      // kostenloser Basemap-Dienst verlangt inzwischen ebenfalls einen API-Key
+      // ("API KEY REQUIRED"-Wasserzeichen). Esris World Street Map ist ohne
+      // Anmeldung/Key nutzbar und funktioniert direkt im Browser.
+      map_tiles: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      map_attribution: "Tiles © Esri — Esri, DeLorme, NAVTEQ",
       line_weight: 4,
       line_opacity: 1,
       ...config
@@ -467,7 +468,7 @@ class WohnmobilToursCard extends HTMLElement {
     }
 
     L.tileLayer(this._config.map_tiles, {
-      maxZoom: 20,
+      maxZoom: 19,
       attribution: this._config.map_attribution || "© OpenStreetMap contributors"
     }).addTo(this._map);
 
